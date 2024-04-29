@@ -16,26 +16,21 @@ import Shared.Notification;
 
 public class ClientHandler implements Runnable {
     private final Client client;
-    private PrintWriter out;
-    private BufferedReader in;
 
     public ClientHandler(Client client) {
         this.client = client;
-        try {
-            out = new PrintWriter(client.getSocket().getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(client.getSocket().getInputStream()));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
     public void run() {
-        try {
+        try (
+            PrintWriter out = new PrintWriter(client.getSocket().getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(client.getSocket().getInputStream()))
+        ) {
             String line;
             while ((line = in.readLine()) != null) {
                 if (line.equals("history")) {
-                    sendNotifications();
+                    sendNotifications(out);
                     continue;
                 }
 
@@ -45,27 +40,16 @@ public class ClientHandler implements Runnable {
                 
                 Notification notification = Notification.fromJson(line);
                 client.addNotification(notification);
-                sendNotification(notification);
+                sendNotification(out, notification);
             }
         } catch (SocketException e) {
             System.out.println("Client disconnected");
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (out != null) {
-                    out.close();
-                }
-                if (in != null) {
-                    in.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 
-    public void sendNotification(Notification notification) {
+    public void sendNotification(PrintWriter out, Notification notification) {
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
@@ -78,12 +62,11 @@ public class ClientHandler implements Runnable {
         }, notification.getDelayInSeconds() * 1000);
     }
 
-    public void sendNotifications() {
+    public void sendNotifications(PrintWriter out) {
         List<Notification> notifications = client.getNotifications();
         for (Notification notification : notifications) {
             out.println(notification.toJson());
         }
         out.println("end");
     }
-
 }
