@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -21,37 +23,87 @@ public class ClientApp {
 
             Scanner sc = new Scanner(System.in);
             while (true) {
-                System.out.println("Enter the message: ");
-                String message = sc.nextLine();
-                if (message.equals("exit")) {
-                    break;
-                }
-                System.out.println("Enter the delay in seconds: ");
+                displayMenu();
+                int choice;
                 try {
-                    String delay = sc.nextLine();
-                    int delayInSeconds = Integer.parseInt(delay);
-                    if (delayInSeconds < 0) {
-                        throw new InvalidInputException("Delay in seconds cannot be negative");
+                    String stringChoice = sc.nextLine();
+                    choice = Integer.parseInt(stringChoice);
+                    if (choice < 1 || choice > 3) {
+                        throw new InvalidInputException("Invalid choice, please enter a number between 1 and 3");
                     }
-
-                    Notification notification = new Notification(message, delayInSeconds,
-                            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                    out.println(notification.toJson());
-
-                    System.out.println("Message sent, waiting for server response...");
-                    // block and wait for response from server
-                    String response = in.readLine();
-                    Notification responseNotification = Notification.fromJson(response);
-                    
-                    System.out.printf("[%s]: %s\n", responseNotification.getDateTimeAtCompleted(), responseNotification.getMessage());
                 } catch (NumberFormatException e) {
-                    System.out.println("Delay in seconds should be an integer");
+                    System.out.println("Invalid choice, please enter a number between 1 and 3");
+                    continue;
                 } catch (InvalidInputException e) {
                     System.out.println(e.getMessage());
+                    continue;
                 }
-            };
+
+                switch (choice) {
+                    case 1:
+                        System.out.println("Enter the message: ");
+                        String message = sc.nextLine();
+                        if (message.equals("exit")) {
+                            break;
+                        }
+                        System.out.println("Enter the delay in seconds: ");
+                        try {
+                            String delay = sc.nextLine();
+                            int delayInSeconds = Integer.parseInt(delay);
+                            if (delayInSeconds < 0) {
+                                throw new InvalidInputException("Delay in seconds cannot be negative");
+                            }
+
+                            Notification notification = new Notification(message, delayInSeconds,
+                                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                            out.println(notification.toJson());
+
+                            System.out.println("Message sent, waiting for server response...");
+                            // block and wait for response from server
+                            String response = in.readLine();
+                            Notification responseNotification = Notification.fromJson(response);
+
+                            System.out.printf("[%s]: %s\n", responseNotification.getDateTimeAtCompleted(),
+                                    responseNotification.getMessage());
+                        } catch (NumberFormatException e) {
+                            System.out.println("Delay in seconds should be an integer");
+                        } catch (InvalidInputException e) {
+                            System.out.println(e.getMessage());
+                        }
+                        break;
+                    case 2:
+                        out.println("history");
+                        System.out.println("Fetching notification history...");
+
+                        List<Notification> notifications = new ArrayList<>();
+                        String line;
+                        while ((line = in.readLine()) != null) {
+                            if (line.equals("end")) {
+                                break;
+                            }
+                            Notification notification = Notification.fromJson(line);
+                            notifications.add(notification);
+                        }
+
+                        for (Notification notification : notifications) {
+                            System.out.printf("[%s]: %s\n", notification.getDateTimeAtCompleted(), notification.getMessage());
+                        }
+                        break;
+                    case 3:
+                        out.println("exit");
+                        System.out.println("Exiting...");
+                        return;
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void displayMenu() {
+        System.out.printf("\n------ MENU ------\n");
+        System.out.println("1. Send a notification");
+        System.out.println("2. Display notification history");
+        System.out.println("3. Exit");
     }
 }
