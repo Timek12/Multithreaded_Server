@@ -31,4 +31,8 @@ public class Client {
     public Client getClientByPort(int port) {
         return this.port == port ? this : null;
     }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
 }
