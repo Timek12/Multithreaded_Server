@@ -1,5 +1,7 @@
 package Client;
 
+import Client.Exceptions.EmptyMessageException;
+import Client.Exceptions.InvalidDurationException;
 import Client.Exceptions.InvalidInputException;
 import Shared.Notification;
 
@@ -25,6 +27,7 @@ public class ClientApp {
             while (true) {
                 displayMenu();
                 int choice;
+                String message = "";
                 try {
                     String stringChoice = sc.nextLine();
                     choice = Integer.parseInt(stringChoice);
@@ -41,33 +44,47 @@ public class ClientApp {
 
                 switch (choice) {
                     case 1:
-                        System.out.println("Enter the message: ");
-                        String message = sc.nextLine();
-                        if (message.equals("exit")) {
-                            break;
+                        try {
+                            System.out.print("Enter the message: ");
+                            message = sc.nextLine();
+                            if (message.equals("exit")) {
+                                break;
+                            }
+
+                            if (message.isEmpty()) {
+                                throw new EmptyMessageException("Message cannot be empty");
+                            }
+                        } catch (EmptyMessageException e) {
+                            System.out.println(e.getMessage());
+                            continue;
                         }
-                        System.out.println("Enter the delay in seconds: ");
+
+                        System.out.print("Enter the delay in seconds: ");
                         try {
                             String delay = sc.nextLine();
                             int delayInSeconds = Integer.parseInt(delay);
                             if (delayInSeconds < 0) {
-                                throw new InvalidInputException("Delay in seconds cannot be negative");
+                                throw new InvalidDurationException("Delay in seconds cannot be negative");
                             }
 
                             Notification notification = new Notification(message, delayInSeconds,
                                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
                             out.println(notification.toJson());
 
                             System.out.println("Message sent, waiting for server response...");
+
                             // block and wait for response from server
                             String response = in.readLine();
                             Notification responseNotification = Notification.fromJson(response);
 
                             System.out.printf("[%s]: %s\n", responseNotification.getDateTimeAtCompleted(),
                                     responseNotification.getMessage());
+
                         } catch (NumberFormatException e) {
                             System.out.println("Delay in seconds should be an integer");
-                        } catch (InvalidInputException e) {
+                        } 
+                        catch (InvalidDurationException e) {
                             System.out.println(e.getMessage());
                         }
                         break;
@@ -75,28 +92,39 @@ public class ClientApp {
                         out.println("history");
                         System.out.println("Fetching notification history...");
 
-                        List<Notification> notifications = new ArrayList<>();
-                        String line;
-                        while ((line = in.readLine()) != null) {
-                            if (line.equals("end")) {
-                                break;
-                            }
-                            Notification notification = Notification.fromJson(line);
-                            notifications.add(notification);
-                        }
+                        List<Notification> notifications = readNotifications(in);
 
-                        for (Notification notification : notifications) {
-                            System.out.printf("[%s]: %s\n", notification.getDateTimeAtCompleted(), notification.getMessage());
-                        }
+                        displayNotifications(notifications);
                         break;
                     case 3:
                         out.println("exit");
                         System.out.println("Exiting...");
+                        sc.close();
+                        socket.close();
                         return;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static List<Notification> readNotifications(BufferedReader in) throws IOException {
+        List<Notification> notifications = new ArrayList<>();
+        String line;
+        while ((line = in.readLine()) != null) {
+            if (line.equals("end")) {
+                break;
+            }
+            Notification notification = Notification.fromJson(line);
+            notifications.add(notification);
+        }
+        return notifications;
+    }
+
+    public static void displayNotifications(List<Notification> notifications) {
+        for (Notification notification : notifications) {
+            System.out.printf("[%s]: %s\n", notification.getDateTimeAtCompleted(), notification.getMessage());
         }
     }
 
