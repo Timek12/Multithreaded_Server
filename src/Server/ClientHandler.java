@@ -24,9 +24,11 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try (
-            PrintWriter out = new PrintWriter(client.getSocket().getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(client.getSocket().getInputStream()))
-        ) {
+                PrintWriter out = new PrintWriter(client.getSocket().getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(client.getSocket().getInputStream())))
+                {
+            // InputStreamReader -> reads bytes and decodes them into characters
+            // BufferedReader -> reads text from a character-input stream
             String line;
             while ((line = in.readLine()) != null) {
                 if (line.equals("history")) {
@@ -34,10 +36,10 @@ public class ClientHandler implements Runnable {
                     continue;
                 }
 
-                if(line.equals("exit")) {
+                if (line.equals("exit")) {
                     break;
                 }
-                
+
                 Notification notification = Notification.fromJson(line);
                 client.addNotification(notification);
                 sendNotification(out, notification);
@@ -56,6 +58,7 @@ public class ClientHandler implements Runnable {
             public void run() {
                 notification.setDateTimeAtCompleted(
                         LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
                 System.out.println("Sending message: " + notification.getMessage());
                 out.println(notification.toJson());
             }
