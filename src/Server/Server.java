@@ -9,24 +9,25 @@ import java.util.List;
 import Shared.Client;
 
 public class Server {
-    //private static Map<String, Notification> clientNotifications = new HashMap<>();
+
     private static List<Client> connectedClients = new ArrayList<>();
+
     public static void main(String[] args) {
-        try (ServerSocket serverSocket = new ServerSocket(8080)) {
+        try (ServerSocket serverSocket = new ServerSocket(8080)) { // try-with-resources
             serverSocket.setReuseAddress(true);
             System.out.println("Server is running on port 8080");
 
             while (true) {
-                Socket client = serverSocket.accept();
-                System.out.println("New client connected:" + client.getPort());
+                Socket clientSocket = serverSocket.accept(); // blocking call
+                System.out.println("New client connected:" + clientSocket.getPort());
 
-                connectedClients.add(new Client(client.getPort(), client));
+                Client newClient = new Client(clientSocket.getPort(), clientSocket);
+                
+                connectedClients.add(newClient);
 
-                ClientHandler clientSock = new ClientHandler(connectedClients.get(connectedClients.size() - 1));
-                new Thread(clientSock).start();
+                ClientHandler clientHandler = new ClientHandler(newClient);
+                new Thread(clientHandler).start();
             }
-
-
         } catch (IOException e) {
             e.printStackTrace();
         }
